@@ -1,11 +1,14 @@
 # Standard Libraries
 import math
 import cmath
+import argparse
 import numbers
 
 # Major Libraries
 import matplotlib.pyplot as plt
 import numpy as np
+
+
 
 ########Global Viarables########
 FREQ = 1  # frequency in GHz
@@ -193,36 +196,44 @@ def two_parameter_search(target1, parameter_name1, parameter_range1, target2, pa
 
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     f, (ax1, ax2) = plt.subplots(ncols=2)
-    im1 = ax1.imshow(S11_map, aspect='auto', extent=[parameter_range2[0], parameter_range2[-1], parameter_range1[0], parameter_range1[-1]],  origin='lower')
-    ax1.set_title('S11')
-    divider1 = make_axes_locatable(ax1)
-    cax1 = divider1.append_axes("right", size="3%", pad=0.1)
-    cbar1 = plt.colorbar(im1, cax=cax1)
-    im2 = ax2.imshow(dS11_map, aspect='auto', extent=[parameter_range2[0], parameter_range2[-1], parameter_range1[0], parameter_range1[-1]],  origin='lower')
-    ax2.set_title('dS11')
-    divider2 = make_axes_locatable(ax2)
-    cax2 = divider2.append_axes("right", size="3%", pad=0.1)
-    cbar2 = plt.colorbar(im2, cax=cax2)
+    im1 = ax1.imshow(S11_map, aspect='auto', extent=[parameter_range2[0], parameter_range2[-1], parameter_range1[0], parameter_range1[-1]],  origin='lower', cmap='gray')
+    ax1.set_title('Reflected Wave')
+    im2 = ax2.imshow(dS11_map, aspect='auto', extent=[parameter_range2[0], parameter_range2[-1], parameter_range1[0], parameter_range1[-1]],  origin='lower', cmap='gray')
+    ax2.set_title('Transmitted Wave')
     plt.show()
 
 ###############################
 
 ##########Example##############
 
-def test_stub_tuning():
+def test_stub_tuning(args, r=4, c=1, l=2):
     global FREQ
     #Define Z-Match Config.
-    END = Lumped_Element(0, 0, 0)
+    END = Lumped_Element(r, c, l)
     Stub = Cable(20, 0.7, 4.5)
     QWC = Cable(73, 0.7, 4.2)
-    tip = Lumped_Element(4, 1, 2)
+    tip = Lumped_Element(r, c, l)
     END.set_nexts(Stub)
     END.set_nexts(QWC)
     QWC.set_nexts(tip)
     #Search!
-    two_parameter_search(FREQ, "frequency", np.linspace(0.7, 1.1, 100), Stub, "length", np.linspace(4, 7, 100), END, tip)
-    Stub.set_length(4.57)
-    one_parameter_search(FREQ, "frequency", np.linspace(0.9, 1.1, 200), END, tip)
+    if args.exp == 2:
+        two_parameter_search(FREQ, "frequency", np.linspace(0.7, 1.1, 100), Stub, "length", np.linspace(4, 7, 100), END, tip)
+    elif args.exp == 1:
+        Stub.set_length(4.57)
+        one_parameter_search(FREQ, "frequency", np.linspace(0.9, 1.1, 200), END, tip)
+    else:
+        raise ValueError('Experiment value can be 1 or 0')
+
 
 if __name__ == '__main__':
-    test_stub_tuning()
+    parser = argparse.ArgumentParser()
+
+    # Model configuration.
+    parser.add_argument('--R', type=int, default=4, help='resistance in ohm')
+    parser.add_argument('--C', type=int, default=1, help='capacitance in pF')
+    parser.add_argument('--L', type=int, default=2, help='inductance in nH')
+    parser.add_argument('--exp', type=int, default=2, help='experiment number')
+    args = parser.parse_args()
+
+    test_stub_tuning(args, args.R, args.C, args.L)
